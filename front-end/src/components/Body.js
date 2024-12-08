@@ -7,52 +7,20 @@ import { GiSlowBlob } from "react-icons/gi";
 import myVideo7 from "./video7.mp4";
 import datas from "./filtered_unique_datas.json"
 
-const stockData = {
-  top10: [
-    "Apple Inc. (AAPL)",
-    "Microsoft Corporation (MSFT)",
-    "Amazon.com, Inc. (AMZN)",
-    "Alphabet Inc. (GOOGL)",
-    "NVIDIA Corporation (NVDA)",
-    "Tesla, Inc. (TSLA)",
-    "Meta Platforms, Inc. (META)",
-    "Berkshire Hathaway Inc. (BRK.B)",
-    "Johnson & Johnson (JNJ)",
-    "Visa Inc. (V)",
-  ],
-  longTerm: [
-    "Apple Inc. (AAPL)",
-    "Johnson & Johnson (JNJ)",
-    "Procter & Gamble Co. (PG)",
-    "PepsiCo, Inc. (PEP)",
-    "Coca-Cola Co. (KO)",
-    "Visa Inc. (V)",
-    "UnitedHealth Group Incorporated (UNH)",
-    "Home Depot, Inc. (HD)",
-    "Mastercard Incorporated (MA)",
-    "Abbott Laboratories (ABT)",
-  ],
-  shortTerm: [
-    "Tesla, Inc. (TSLA)",
-    "NVIDIA Corporation (NVDA)",
-    "Advanced Micro Devices, Inc. (AMD)",
-    "Shopify Inc. (SHOP)",
-    "PayPal Holdings, Inc. (PYPL)",
-    "Netflix, Inc. (NFLX)",
-    "Palantir Technologies Inc. (PLTR)",
-    "Zoom Video Communications, Inc. (ZM)",
-    "Roku, Inc. (ROKU)",
-    "CrowdStrike Holdings, Inc. (CRWD)",
-  ],
-};
-
 export default function Body({token}) {
   const [selectedStocks, setSelectedStocks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState(""); // Tracks the selected category
+  const stocksPerPage = 10;
+  const [currentPage, setCurrentPage] = useState(1);
 
 
   const handleButtonClick = (category) => {
-    setSelectedStocks(stockData[category] || []);
+    setSelectedCategory(category); // Set the selected category
+    setSelectedStocks([]); // Clear previous stocks
+    if (category === "shortTerm") {
+      processData(); // Fetch data only for Slow Accumulation
+    }
   };
 
   const satisfiesLogic = (apiData) => {
@@ -200,23 +168,30 @@ export default function Body({token}) {
   };
 
   // Call fetchDataWithRateLimit for each stock
-  const processData = async () => {
-    const nameArray = [];
-    for (const stock of datas) {
-      const { instrument_key, name, segment } = stock;
 
-      if (segment !== "BSE_EQ") continue;
+const processData = async () => {
+  setLoading(true); // Set loading to true when fetching starts
+  const nameArray = [];
 
-      const apiData = await fetchDataWithRateLimit(instrument_key);
-      if (apiData && satisfiesLogic(apiData)) {
-        console.log(name)
-        nameArray.push(name);
-      }
+  for (const stock of datas) {
+    const { instrument_key, name, segment } = stock;
+
+    if (segment !== "BSE_EQ") continue;
+
+    // Fetch data with rate limiting
+    const apiData = await fetchDataWithRateLimit(instrument_key);
+
+    if (apiData && satisfiesLogic(apiData)) {
+      nameArray.push(name);
+
+      // Dynamically update the state with the new stock
+      setSelectedStocks((prevStocks) => [...prevStocks, name]);
     }
+  }
 
-    setSelectedStocks(nameArray);
-    setLoading(false);
-  };
+  setLoading(false); // Set loading to false when fetching is complete
+};
+
 
   useEffect(() => {
     processData();
@@ -233,7 +208,31 @@ export default function Body({token}) {
       document.body.style.overflow = "auto";
     };
   }, [loading, selectedStocks]);
-  console.log(selectedStocks);
+
+  const indexOfLastStock = Math.min(
+    currentPage * stocksPerPage,
+    selectedStocks.length
+  );
+  const indexOfFirstStock = (currentPage - 1) * stocksPerPage;
+  const currentStocks = selectedStocks.slice(
+    indexOfFirstStock,
+    indexOfLastStock
+  );
+
+  // Handle the Next Page button click
+  const nextPage = () => {
+    if (currentPage < Math.ceil(selectedStocks.length / stocksPerPage)) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const prevPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const goToFirstPage = () => setCurrentPage(1);
 
   return (
     <div className="body w-screen min-h-screen overflow-y-auto flex items-center justify-start text-black flex-col absolute">
@@ -390,7 +389,7 @@ export default function Body({token}) {
           </button>
         </div>
 
-        {selectedStocks.length > 0 && (
+        {selectedCategory && selectedStocks.length > 0 && (
           <div className="table-container">
             <table className="styled-table">
               <thead>
@@ -400,14 +399,40 @@ export default function Body({token}) {
                 </tr>
               </thead>
               <tbody>
-                {selectedStocks.map((stock, index) => (
+                {currentStocks.map((stock, index) => (
                   <tr key={index}>
-                    <td>{index + 1}</td>
+                    <td>{indexOfFirstStock + index + 1}</td>
                     <td>{stock}</td>
                   </tr>
                 ))}
-              </tbody>
+              </tbody>                                                                            
             </table>
+            <div className="pagination">
+                <button
+                  onClick={prevPage}
+                  disabled={currentPage === 1}
+                  className="previous"
+                >
+                  Previous
+                </button>
+                <button
+                  onClick={goToFirstPage}
+                  disabled={currentPage === 1}
+                  className="first"
+                >
+                  First Page
+                </button>
+                <span className="mb-20">Page {currentPage}</span>
+                <button
+                  onClick={nextPage}
+                  disabled={
+                    currentPage === Math.ceil(selectedStocks.length / stocksPerPage)
+                  }
+                  className="next"
+                >
+                  Next
+                </button>
+              </div>
           </div>
         )}
       </div>
