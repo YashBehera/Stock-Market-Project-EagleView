@@ -1,0 +1,45 @@
+.ticker-container {
+    overflow: hidden;
+    white-space: nowrap;
+    background-color: #222; /* Dark background */
+    padding: 10px;
+  }
+
+  .ticker {
+    display: inline-block;
+    animation: scroll-left 20s linear infinite;
+  }
+
+  .ticker-item {
+    display: inline-block;
+    color: white;
+    font-size: 1rem;
+    margin-right: 20px;
+  }
+
+  .ticker-symbol {
+    font-weight: bold;
+    margin-right: 5px;
+  }
+
+  .ticker-price {
+    color: #ddd;
+    margin-right: 5px;
+  }
+
+  .ticker-change.positive {
+    color: green;
+  }
+
+  .ticker-change.negative {
+    color: red;
+  }
+
+  @keyframes scroll-left {
+    0% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
